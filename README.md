@@ -6,22 +6,20 @@ use DBIish::Savepoint;
 
 my $t = DBIish::Transaction.new(connection => {DBIish.connect('Pg', :$database);}, :retry);
 
-$t.in-transaction: {
-    my $db = $_;
+$t.in-transaction: -> $dbh {
     # BEGIN issued at start
     
     $dbh.do(q{CREATE TABLE tab (col integer)});
     
     my $sth = $dbh.prepare('INSERT INTO tab VALUES ($1);');
-    $sth.exectute(1);
+    $sth.execute(1);
     
     # Also allows for savepoints on databases supporting this behaviour.
     # These are kinda like sub-transactions. Catch the exception to prevent the
     # outer transaction from being rolled back.
     try {
         my $sp = DBIish::Savepoint.new(connection => $dbh);
-        $sp.in-savepoint: {
-            my $sp-dbh = $_;
+        $sp.in-savepoint: -> $sp-dbh {
             # SAVEPOINT issued at start
             
             my $updsth = $sp-dbh.prepare('UPDATE tab SET col = col + 1');
@@ -37,9 +35,7 @@ $t.in-transaction: {
     # Table "tab" contains a single record with col = 1
 }
 
-$t.in-transaction: {
-    my $dbh = $_;
-    
+$t.in-transaction: -> $dbh {
     my $sth = $dbh.prepare('INSERT INTO t VALUES ($1);');
     $sth.execute(2);
     
@@ -57,15 +53,15 @@ failures such as disconnect, deadlocks, serialization issues, or snapshot age.
 ## DBIish::Transaction
 
 ```raku
-DBIish::Transaction.new(:connection, :retry, :max-retry-count, :begin, :rollback, :commit);
+DBIish::Transaction.new(:connection, :retry, :max-retry-count, :begin, :rollback, :after-rollback, :commit);
 ```
 
-### connection
+### :connection
 
 Either a DBDish::Connection, or a Callable which returns a DBDish::Connection. If a Callable is provided transactions
  may be retried if disconnect occurs when :retry is specified.
  
-### begin
+### :begin($dbh)
 
 ```raku
 {  $_.do(q{BEGIN})  } 
@@ -75,14 +71,28 @@ By default this is a Callable which performs the simplest begin statement. You m
 Serializable Isolation level is highly recommended on supported products as this mode eliminates many potential
 errors due to otherwise silent race conditions.
 
+In the below example using `SERIALIZABLE` and `:retry`, the transaction will be attempted up to 4 times during
+serialization errors. This allows safe Raku read/modify/write without needing to worry about locking for race
+conditions or unexpected failure.
+
 ```raku
+my $id = 1;
+
 my $t = DBIish::Transaction.new(:retry,
     connection => { DBIish.connect('Pg', :$database) },
-    begin => { $_.do(q{ BEGIN ISOLATION LEVEL SERIALIZABLE } ) }
-);
+    begin => { $_.do(q{ BEGIN ISOLATION LEVEL SERIALIZABLE } ) },
+    :retry
+).in-transaction: -> $dbh {
+    my $sth = $dbh.prepare('SELECT col FROM tabl WHERE id = $1');
+    $sth.execute($id);
+    my $row = $sth.row(:hash);
+
+    my $sth = $dbh.prepare('UPDATE INTO tabl SET col = $2 WHERE id = $1');
+    $sth.execute( $id, $row<col> * complex_function() );
+}
 ```
 
-### rollback
+### :rollback($dbh)
 
 ```raku
 {  $_.do(q{ROLLBACK})  } 
@@ -92,12 +102,12 @@ By default this is a Callable which performs the simplest rollback statement.
 
 NOTE: `AND CHAIN` type modifications will require you to provide some non-trivial logic in the `begin` callable.
 
-### after-rollback(Int $transaction-retry-attempt)
+### :after-rollback(Int $transaction-retry-attempt)
 
 Callable which will be called after a rollback is attempted. This is useful for resetting state for another attempt at
 the DB transaction work, or for logging/debugging purposes.
 
-### commit
+### :commit($dbh)
 
 ```raku
 {  $_.do(q{COMMIT})  } 
@@ -107,7 +117,7 @@ By default this is a Callable which performs the simplest commit statement.
 
 NOTE: `AND CHAIN` type modifications will require you to provide some non-trivial logic in the `begin` callable.
 
-### retry
+### :retry
 
 Catches errors [marked temporary](https://github.com/raku-community-modules/DBIish#statement-exceptions) by DBIish. The
 transaction in progress will be rolled back and a new transaction started. The function body is expected to be
@@ -116,7 +126,7 @@ idempotent for non-database work as it may be executed multiple times.
 If `:connection` is provided a function, this will retry on a database connectivity issue as well by establishing
 a new connection and attempting to execute the transaction body.
 
-### max-retry-count
+### :max-retry-count
 
 Number of times to retry the work after a temporary failure before giving up.
 
@@ -129,11 +139,11 @@ Number of times to retry the work after a temporary failure before giving up.
 DBIish::Transaction.new(:connection, :begin, :rollback, :commit);
 ```
 
-### connection
+### :connection
 
 A DBDish::Connection with a currently active transaction.
 
-### begin
+### :begin($dbh)
 
 ```raku
 {  $_.do(q{SAVEPOINT <random name>})  } 
@@ -141,7 +151,7 @@ A DBDish::Connection with a currently active transaction.
 
 By default this is a Callable which performs the simplest `SAVEPOINT` statement. A random name is selected.
 
-### rollback
+### :rollback($dbh)
 
 ```raku
 {  $_.do(q{ROLLBACK TO SAVEPOINT <random name>})  } 
@@ -149,12 +159,12 @@ By default this is a Callable which performs the simplest `SAVEPOINT` statement.
 
 By default this is a Callable which performs the simplest `ROLLBACK TO SAVEPOINT` statement.
 
-### after-rollback()
+### :after-rollback()
 
 Callable which will be called after a rollback is attempted. This is useful for resetting state for another attempt,
 or for logging/debugging purposes.
 
-### release
+### :release($dbh)
 
 ```raku
 {  $_.do(q{RELEASE SAVEPOINT})  } 
