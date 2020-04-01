@@ -1,25 +1,35 @@
 {
-  "perl": "6.d",
-  "raku": "6.d",
-    "name"          : "DBIish::Transaction",
-    "version"       : "1.0.0",
-    "description"   : "Database Transaction manager",
-    "test-depends"  : [ "DBIish" ],
-    "license"       : "CC0-1.0",
-    "depends" : [ "DBIish" ],
-    "provides" : {
-        "DBIish::Transaction"       : "lib/DBIish/Transaction.pm6",
-        "DBIish::Savepoint"         : "lib/DBIish/Savepoint.pm6"
-    },
-    "source-url" : "git://github.com/rbt/DBIish.git",
-    "tags": [
-      "database",
-      "mysql",
-      "postgres"
-    ],
+  "auth": null,
   "authors": [
     "Rod Taylor <rbt@cpan.org>"
   ],
-  "meta-version": "1"
-
+  "build-depends": [
+  ],
+  "depends": [
+    "DBIish"
+  ],
+  "description": "Database Transaction manager",
+  "license": "CC0-1.0",
+  "meta-version": "1",
+  "name": "DBIish::Transaction",
+  "perl": "6.d",
+  "provides": {
+    "DBIish::Savepoint": "lib/DBIish/Savepoint.pm6",
+    "DBIish::Transaction": "lib/DBIish/Transaction.pm6"
+  },
+  "resources": [
+  ],
+  "source-url": "git://github.com/rbt/DBIish.git",
+  "support": {
+    "source": null
+  },
+  "tags": [
+    "database",
+    "mysql",
+    "postgres"
+  ],
+  "test-depends": [
+    "DBIish"
+  ],
+  "version": "1.0.1"
 }
