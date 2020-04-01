@@ -32,6 +32,7 @@ method in-transaction(Callable $code) {
     my DBDish::Connection $dbh;
 
     my $ret;
+    my $want-dispose = False;
     my $finished = False;
     repeat until $finished {
         # Try to retrieve a valid connection if the last used connection was not valid.
@@ -39,6 +40,7 @@ method in-transaction(Callable $code) {
             given $.connection {
                 when Callable {
                     $dbh = ($.connection)();
+                    $want-dispose = True;
                 }
                 when DBDish::Connection {
                     $dbh = $.connection;
@@ -89,6 +91,10 @@ method in-transaction(Callable $code) {
                 $ex.rethrow;
             }
         }
+    }
+    if $want-dispose {
+        $dbh.dispose;
+        $dbh = Nil;
     }
 
     return $ret;

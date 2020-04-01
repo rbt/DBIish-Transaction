@@ -59,7 +59,9 @@ DBIish::Transaction.new(:connection, :retry, :max-retry-count, :begin, :rollback
 ### :connection
 
 Either a DBDish::Connection, or a Callable which returns a DBDish::Connection. If a Callable is provided transactions
- may be retried if disconnect occurs when :retry is specified.
+may be retried if disconnect occurs when :retry is specified. A connection provided by a callable will be disposed of on
+completion of the transaction.
+
  
 ### :begin($dbh)
 
