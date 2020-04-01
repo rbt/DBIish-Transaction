@@ -8,7 +8,7 @@
   "depends": [
     "DBIish"
   ],
-  "description": "Database Transaction manager",
+  "description": "Wrapper to enforce Database Transactions",
   "license": "CC0-1.0",
   "meta-version": "1",
   "name": "DBIish::Transaction",
@@ -19,10 +19,13 @@
   },
   "resources": [
   ],
-  "source-url": "git://github.com/rbt/DBIish.git",
+  "source-url": "https://github.com/rbt/DBIish-Transaction.git",
   "support": {
-    "source": null
+    "email": "rbt@cpan.org",
+    "source": "https://github.com/rbt/DBIish-Transaction.git",
+    "bugtracker": "https://github.com/rbt/DBIish-Transaction/issues"
   },
+
   "tags": [
     "database",
     "mysql",
