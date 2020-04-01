@@ -80,7 +80,7 @@ my $id = 1;
 
 my $t = DBIish::Transaction.new(:retry,
     connection => { DBIish.connect('Pg', :$database) },
-    begin => { $_.do(q{ BEGIN ISOLATION LEVEL SERIALIZABLE } ) },
+    begin => -> $dbh { $dbh.do(q{ BEGIN ISOLATION LEVEL SERIALIZABLE } ) },
     :retry
 ).in-transaction: -> $dbh {
     my $sth = $dbh.prepare('SELECT col FROM tabl WHERE id = $1');
