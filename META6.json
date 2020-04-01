@@ -21,11 +21,10 @@
   ],
   "source-url": "https://github.com/rbt/DBIish-Transaction.git",
   "support": {
+    "bugtracker": "https://github.com/rbt/DBIish-Transaction/issues",
     "email": "rbt@cpan.org",
-    "source": "https://github.com/rbt/DBIish-Transaction.git",
-    "bugtracker": "https://github.com/rbt/DBIish-Transaction/issues"
+    "source": "https://github.com/rbt/DBIish-Transaction.git"
   },
-
   "tags": [
     "database",
     "mysql",
@@ -34,5 +33,5 @@
   "test-depends": [
     "DBIish"
   ],
-  "version": "1.0.1"
+  "version": "1.0.2"
 }
