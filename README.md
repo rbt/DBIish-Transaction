@@ -59,10 +59,32 @@ DBIish::Transaction.new(:connection, :retry, :max-retry-count, :begin, :rollback
 ### :connection
 
 Either a DBDish::Connection, or a Callable which returns a DBDish::Connection. If a Callable is provided transactions
-may be retried if disconnect occurs when :retry is specified. A connection provided by a callable will be disposed of on
-completion of the transaction.
+may be retried if disconnect occurs when :retry is specified. A connection provided by a callable will be disposed of after
+completion (commit or rollback) of the transaction. It may also be disposed of and a new connection obtained during
+retry to resolve some error types.
 
- 
+This is an example of a transaction using a connection pooler for higher performance, the automatic ability to retry on
+network issues, and an upper limit on simultaneous connections. It is recommended for any programs with concurrancy or
+on spotty networks.
+```raku
+use DBIish::Transaction;
+use DBIish::Pool;
+my $pool = DBIish::Pool.new(driver => 'Pg', :$database ,:max-connections(20));
+
+my $t = DBIish::Transaction.new(connection => {$pool.get-connection()}, :retry);
+```
+
+A connection created outside `DBIish::Transaction` can can retry when the database gives a temporary failure such
+ as a serialization error, but not when there are network issues.
+
+```raku
+use DBIish::Transaction;
+use DBIish;
+my $dbh = DBIish.connect('Pg', :$database);
+
+my $t = DBIish::Transaction.new(connection => $dbh, :retry);
+```
+
 ### :begin($dbh)
 
 ```raku
