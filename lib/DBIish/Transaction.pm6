@@ -91,10 +91,13 @@ method in-transaction(Callable $code) {
                 $ex.rethrow;
             }
         }
-    }
-    if $want-dispose {
-        $dbh.dispose;
-        $dbh = Nil;
+
+        LEAVE {
+            if $want-dispose {
+                $dbh.dispose;
+                $dbh = Nil;
+            }
+        }
     }
 
     return $ret;
