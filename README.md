@@ -6,14 +6,17 @@ use DBIish::Savepoint;
 
 my $t = DBIish::Transaction.new(connection => {DBIish.connect('Pg', :$database);}, :retry);
 
+# A prepared statement may span multiple transactions
+my $sth = $dbh.prepare('INSERT INTO tab VALUES ($1)');
+
 $t.in-transaction: -> $dbh {
     # BEGIN issued at start
-    
-    $dbh.do(q{CREATE TABLE tab (col integer)});
-    
-    my $sth = $dbh.prepare('INSERT INTO tab VALUES ($1);');
+
+    $dbh.execute(q{CREATE TABLE tab (col integer)});
+
+    # INSERT INTO tab VALUES (1)
     $sth.execute(1);
-    
+
     # Also allows for savepoints on databases supporting this behaviour.
     # These are kinda like sub-transactions. Catch the exception to prevent the
     # outer transaction from being rolled back.
@@ -21,27 +24,38 @@ $t.in-transaction: -> $dbh {
         my $sp = DBIish::Savepoint.new(connection => $dbh);
         $sp.in-savepoint: -> $sp-dbh {
             # SAVEPOINT issued at start
-            
-            my $updsth = $sp-dbh.prepare('UPDATE tab SET col = col + 1');
-            $updsth.execute();
-            
+
+            $sp-dbh.execute('UPDATE tab SET col = col + 1');
+
+            # This statement fails. It operates within the savepoint despite
+            # being prepared before the savepoint block.
             $sth.execute('Insert Invalid Value');
-            
+
             # ROLLBACK TO <savepoint> issued due to the above failure.
         }
     }
-    
+
+    # The initial INSERT is preserved after the savepoint is rolled back
+    for $dbh.execute('SELECT col FROM tab').allrows() -> $row {
+      say $row<col>; # 1
+    }
+
     # COMMIT issued at end
     # Table "tab" contains a single record with col = 1
 }
 
 $t.in-transaction: -> $dbh {
-    my $sth = $dbh.prepare('INSERT INTO t VALUES ($1);');
+    # INSERT INTO tab VALUES (2)
     $sth.execute(2);
-    
+
     fail('Changed my mind about the insert');
-    
-    # ROLLBACK due to the error
+
+    # ROLLBACK transaction due to the Raku fail
+}
+
+# The initial INSERT with value 1 is committed.
+for $dbh.execute('SELECT col FROM tab').allrows() -> $row {
+    say $row<col>; # 1
 }
 ```
 
